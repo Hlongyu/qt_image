@@ -1,0 +1,48 @@
+ARG BASE_IMAGE=qt-buildenv
+ARG BASE_VERSION=latest
+
+FROM ${BASE_IMAGE}:${BASE_VERSION} AS build
+
+ARG QT_VERSION=6.8.0
+ARG QT_REPO=https://code.qt.io/qt/qt5.git
+ARG QT_GIT_REF=v${QT_VERSION}
+ARG QT_SUBMODULES=qtbase,qtimageformats,qthttpserver,qttranslations
+
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
+RUN set -eux; \
+    git clone --depth 1 --branch "${QT_GIT_REF}" "${QT_REPO}" /qt-src; \
+    cd /qt-src; \
+    perl init-repository --module-subset="${QT_SUBMODULES}"
+
+WORKDIR /qt-src/build
+
+RUN set -eux; \
+    common_args=( \
+      -opensource \
+      -confirm-license \
+      -prefix "/opt/qt/${QT_VERSION}" \
+      -opengl es2 \
+      -ssl \
+      -cmake-generator Ninja \
+    ); \
+    if ../configure -submodules "${QT_SUBMODULES}" "${common_args[@]}"; then \
+      :; \
+    else \
+      ../configure "${common_args[@]}"; \
+    fi; \
+    cat config.summary;\
+    cmake --build . --parallel; \
+    cmake --install .
+
+FROM ${BASE_IMAGE}:${BASE_VERSION} AS final
+
+ARG QT_VERSION=6.8.0
+
+COPY --from=build /opt/qt/${QT_VERSION} /opt/qt/${QT_VERSION}
+
+ENV QT_ROOT=/opt/qt/${QT_VERSION}
+ENV PATH=/opt/qt/${QT_VERSION}/bin:$PATH
+
+WORKDIR /work
+CMD ["/bin/bash"]

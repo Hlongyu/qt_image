@@ -50,11 +50,32 @@ docker build -f Dockerfile_base \
 docker run --rm -it qt-buildenv:ubuntu20.04-gcc9-cmake bash -lc "gcc --version && cmake --version"
 ```
 
+## Qt 6.8 编译镜像
+
+Dockerfile：`Dockerfile_qt6.8`
+
+示例（先准备 base 镜像 tag 为 `base_version`）：
+
+```bash
+BASE_VERSION="$(cat base_version)"
+docker build -f Dockerfile_qt6.8 \
+  --build-arg BASE_IMAGE=yourname/qt-buildenv \
+  --build-arg BASE_VERSION="${BASE_VERSION}" \
+  -t yourname/qt6.8:"${BASE_VERSION}" \
+  .
+```
+
 ## GitHub Actions（推送到 Docker Hub）
 
 工作流：`.github/workflows/dockerhub-base.yml`
 
+- base 镜像只在 `base_version` 发生变化时才会构建/推送（因此修改 `Dockerfile_base` 时请同步更新 `base_version`）。
 - 镜像仓库名：优先使用 GitHub Variables `DOCKERHUB_REPO`（或 Secrets `DOCKERHUB_REPO`）（例如 `yourname/qt-buildenv`）；若未设置则默认 `${DOCKERHUB_USERNAME}/qt-buildenv`
 - 登录凭据：GitHub Secrets `DOCKERHUB_USERNAME` 与 `DOCKERHUB_TOKEN`
 - 版本号来源：`base_version`
 - 打 tag 规则：若 Docker Hub 上已存在 `${version}` 这个 tag，则本次推送为 `latest`；否则推送为 `${version}`
+
+Qt 6.8 工作流：`.github/workflows/dockerhub-qt68.yml`
+
+- base 仓库：`DOCKERHUB_REPO`（Variables 或 Secrets）
+- qt6.8 输出仓库：`DOCKERHUB_QT68_REPO`（Variables 或 Secrets）
