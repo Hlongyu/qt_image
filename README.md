@@ -54,6 +54,8 @@ docker run --rm -it qt-buildenv:ubuntu20.04-gcc9-cmake bash -lc "gcc --version &
 
 Dockerfile：`Dockerfile_qt6.8`
 
+默认构建 Qt `6.8.3`，源码通过 `wget` 从 `download.qt.io` 获取（可用 `QT_VERSION` 或 `QT_TARBALL_URL` 覆盖）。
+
 示例（先准备 base 镜像 tag 为 `base_version`）：
 
 ```bash
