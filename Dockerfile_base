@@ -1,0 +1,106 @@
+FROM ubuntu:20.04
+
+ARG DEBIAN_FRONTEND=noninteractive
+ARG TARGETARCH
+ARG CMAKE_VERSION=3.31.6
+
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
+# Qt build toolchain + common system deps (X11/XCB/Wayland/OpenGL/SSL/etc.)
+RUN set -eux; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends \
+      ca-certificates \
+      curl \
+      git \
+      gnupg \
+      build-essential \
+      gcc-9 \
+      g++-9 \
+      ninja-build \
+      pkg-config \
+      python3 \
+      python3-pip \
+      perl \
+      bison \
+      flex \
+      gperf \
+      ccache \
+      libgl1-mesa-dev \
+      libglu1-mesa-dev \
+      libgles2-mesa-dev \
+      libegl1-mesa-dev \
+      libdrm-dev \
+      libgbm-dev \
+      libglib2.0-dev \
+      libdbus-1-dev \
+      libssl-dev \
+      zlib1g-dev \
+      libbz2-dev \
+      liblzma-dev \
+      libsqlite3-dev \
+      libpng-dev \
+      libjpeg-dev \
+      libtiff-dev \
+      libwebp-dev \
+      libfontconfig1-dev \
+      libfreetype6-dev \
+      libicu-dev \
+      libasound2-dev \
+      libpulse-dev \
+      libudev-dev \
+      libx11-dev \
+      libxext-dev \
+      libxfixes-dev \
+      libxi-dev \
+      libxrender-dev \
+      libxrandr-dev \
+      libxkbcommon-dev \
+      libxkbcommon-x11-dev \
+      libx11-xcb-dev \
+      libxcb1-dev \
+      libxcb-glx0-dev \
+      libxcb-keysyms1-dev \
+      libxcb-image0-dev \
+      libxcb-shm0-dev \
+      libxcb-icccm4-dev \
+      libxcb-sync-dev \
+      libxcb-xfixes0-dev \
+      libxcb-shape0-dev \
+      libxcb-randr0-dev \
+      libxcb-render-util0-dev \
+      libxcb-util-dev \
+      libxcb-xinerama0-dev \
+      libxcb-xkb-dev \
+      libsm-dev \
+      libice-dev \
+      libwayland-dev \
+      wayland-protocols; \
+    update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 100; \
+    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-9 100; \
+    rm -rf /var/lib/apt/lists/*
+
+# Install a recent CMake (per-arch), instead of Ubuntu 20.04's apt CMake.
+RUN set -eux; \
+    arch="${TARGETARCH:-}"; \
+    if [[ -z "${arch}" ]]; then arch="$(dpkg --print-architecture)"; fi; \
+    case "${arch}" in \
+      amd64) cmake_arch="x86_64" ;; \
+      arm64) cmake_arch="aarch64" ;; \
+      *) echo "Unsupported arch=${arch} (TARGETARCH=${TARGETARCH:-unset})" >&2; exit 1 ;; \
+    esac; \
+    cmake_dir="cmake-${CMAKE_VERSION}-linux-${cmake_arch}"; \
+    curl -fsSL -o /tmp/cmake.tgz \
+      "https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/${cmake_dir}.tar.gz"; \
+    mkdir -p /opt; \
+    tar -xzf /tmp/cmake.tgz -C /opt; \
+    ln -sfn "/opt/${cmake_dir}" /opt/cmake; \
+    ln -sf /opt/cmake/bin/cmake /usr/local/bin/cmake; \
+    ln -sf /opt/cmake/bin/ctest /usr/local/bin/ctest; \
+    ln -sf /opt/cmake/bin/cpack /usr/local/bin/cpack; \
+    rm -f /tmp/cmake.tgz; \
+    cmake --version; \
+    gcc --version | head -n 1
+
+WORKDIR /qtbuild
+CMD ["/bin/bash"]
